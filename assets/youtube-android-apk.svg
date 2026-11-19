@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" viewBox="0 0 720 240">
+  <title id="title">YouTube search available in Android APK</title>
+  <desc id="desc">Retro styled badge announcing YouTube search support in the Android APK.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#121826"/>
+      <stop offset="1" stop-color="#1f3b49"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect width="720" height="240" rx="28" fill="url(#bg)"/>
+  <g opacity=".16" stroke="#f7d38b" stroke-width="2">
+    <path d="M48 44h624M48 80h624M48 116h624M48 152h624M48 188h624"/>
+    <path d="M84 24v192M156 24v192M228 24v192M300 24v192M372 24v192M444 24v192M516 24v192M588 24v192"/>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="56" y="56" width="168" height="120" rx="26" fill="#ff2f2f"/>
+    <path d="M125 91v50l45-25z" fill="#fff"/>
+  </g>
+  <g fill="#f7fbff" font-family="Inter, Segoe UI, Arial, sans-serif">
+    <text x="260" y="100" font-size="40" font-weight="800">YouTube Search</text>
+    <text x="260" y="145" font-size="26" font-weight="600" fill="#bfe9e4">available in the Android APK</text>
+  </g>
+  <g transform="translate(560 138)">
+    <rect width="104" height="42" rx="21" fill="#29d6d0"/>
+    <text x="52" y="28" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18" font-weight="800" fill="#101824">APK</text>
+  </g>
+</svg>

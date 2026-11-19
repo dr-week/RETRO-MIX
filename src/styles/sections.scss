@@ -1,0 +1,100 @@
+.library-column {
+  max-width: 680px; width: 100%; color: #f7f5f6;
+}
+.library-column h1, .library-column h2 { margin: 0; color: #fff; }
+.library-column button { font: inherit; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 0; }
+
+/* Minimalist Section Header */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;
+}
+.section-title { font-size: 26px; font-weight: 700; letter-spacing: -0.04em; color: #ffffff; }
+.section-meta {
+  color: #6d636c; font-size: 11px; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.04em;
+}
+
+/* Minimal Capsule Search */
+.minimal-search {
+  display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 14px;
+  margin-bottom: 20px; border-radius: 21px; background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05); color: #7a6f79; transition: border-color 0.25s, background 0.25s;
+}
+.minimal-search:focus-within {
+  background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 95, 125, 0.35); color: #ffffff;
+}
+.minimal-search input {
+  flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; color: #ffffff; font-size: 13px;
+}
+.minimal-search input::placeholder { color: #5c525b; }
+
+/* Minimalist Track List & Clean Rows */
+.minimal-list { display: flex; flex-direction: column; }
+.minimal-row {
+  display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px;
+  background: transparent; color: inherit; text-align: left; transition: background 0.18s ease;
+  cursor: pointer; border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+.minimal-row:last-child { border-bottom: none; }
+.minimal-row:hover { background: rgba(255, 255, 255, 0.04); }
+.minimal-row.is-active { background: rgba(255, 85, 120, 0.08); }
+.minimal-row.is-active .row-name { color: #ff6584; }
+
+.row-thumb {
+  width: 42px; height: 42px; flex: none; border-radius: 8px; background-color: #171318;
+  background-size: cover; background-position: center; display: grid; place-items: center;
+  color: #554a54; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.row-name {
+  color: #ffffff; font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.row-artist {
+  color: #7b707a; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.row-time {
+  flex: none; color: #60575f; font-size: 11px; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums;
+}
+
+/* Minimal Action Button (Single quiet icon on right) */
+.row-action-btn {
+  width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 50%;
+  color: #6e646d; cursor: pointer; transition: color 0.18s, background 0.18s, transform 0.18s; border: 0; background: transparent;
+}
+.row-action-btn:hover { color: #ffffff; background: rgba(255, 255, 255, 0.06); }
+.row-action-btn:active { transform: scale(0.9); }
+.row-action-btn.is-active { color: #ff5277; }
+
+/* Playing Mini Waveform */
+.mini-waveform { display: flex; align-items: center; gap: 2.5px; height: 12px; }
+.mini-waveform span {
+  width: 2.5px; height: 100%; border-radius: 2px; background: #ff5277; animation: mini-wave 0.8s ease-in-out infinite alternate;
+}
+.mini-waveform span:nth-child(2) { animation-delay: 0.2s; height: 60%; }
+.mini-waveform span:nth-child(3) { animation-delay: 0.4s; height: 80%; }
+@keyframes mini-wave { to { transform: scaleY(0.4); opacity: 0.6; } }
+
+/* Quiet Empty State */
+.minimal-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 60px 20px; color: #5d535c; text-align: center;
+}
+.minimal-empty p { margin: 0; font-size: 12.5px; color: #786c77; }
+
+/* Circular Expansion and Reversible Vortex Suck Animation for Downloads Vault */
+.vortex-enter-active {
+  animation: vortex-expand 0.62s cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: calc(100% - 48px) 50px;
+}
+.vortex-leave-active {
+  animation: vortex-collapse 0.48s cubic-bezier(0.7, 0, 0.84, 0) forwards; transform-origin: calc(100% - 48px) 50px;
+  position: absolute; top: 0; left: 0; right: 0;
+}
+@keyframes vortex-expand {
+  0% { clip-path: circle(0% at calc(100% - 48px) 50px); opacity: 0; transform: scale(0.92); }
+  40% { opacity: 1; }
+  100% { clip-path: circle(150% at calc(100% - 48px) 50px); opacity: 1; transform: scale(1); }
+}
+@keyframes vortex-collapse {
+  0% { clip-path: circle(150% at calc(100% - 48px) 50px); opacity: 1; transform: scale(1); }
+  60% { opacity: 0.85; }
+  100% { clip-path: circle(0% at calc(100% - 48px) 50px); opacity: 0; transform: scale(0.9); }
+}

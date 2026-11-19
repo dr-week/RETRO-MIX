@@ -1,0 +1,119 @@
+.topbar { height: 120px; padding: 32px 5% 12px; position: relative; z-index: 10; }
+.topbar-inner { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 1180px; margin: 0 auto; }
+.brand {
+  color: #fff; text-decoration: none; font-size: clamp(34px, 5.2vw, 56px);
+  font-weight: 800; line-height: 1; letter-spacing: -0.06em;
+  animation: brand-idle 4.6s ease-in-out 2s infinite;
+}
+@keyframes brand-idle {
+  0%, 74%, 100% { transform: translateY(0); text-shadow: none; }
+  82% { transform: translateY(-1px); text-shadow: 0 0 18px rgba(255, 101, 132, 0.18); }
+}
+.brand em, .brand-period { color: #ff6584; font-style: normal; }
+.brand::after {
+  content: 'MUSIC FOR YOUR MOMENTS'; display: block; margin-top: 10px;
+  color: #6e646d; font: 600 10px 'IBM Plex Mono', monospace; letter-spacing: 0.38em;
+}
+.brand-mark, .status-tag { display: none; }
+
+/* Top-Right Disc Vault Button */
+.topbar-disc-btn {
+  width: 50px; height: 50px; display: grid; place-items: center; border-radius: 50%; color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  background: radial-gradient(circle at 35% 25%, rgba(38, 29, 40, 0.85), rgba(16, 12, 18, 0.95));
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(16px); position: relative; cursor: pointer;
+  transition: transform 0.35s cubic-bezier(0.2, 1.4, 0.35, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.topbar-disc-btn .badge-dot {
+  position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; border-radius: 50%;
+  background: #ff476e; box-shadow: 0 0 8px #ff476e; pointer-events: none;
+}
+.topbar-disc-btn .disc-icon-wrap {
+  display: grid; place-items: center; transition: transform 0.65s cubic-bezier(0.16, 1.25, 0.3, 1), color 0.3s;
+}
+.topbar-disc-btn.is-open {
+  border-color: rgba(255, 95, 125, 0.65);
+  box-shadow: 0 0 24px rgba(255, 75, 110, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+.topbar-disc-btn.is-open .disc-icon-wrap { transform: rotate(180deg) scale(1.1); color: #ff6584; }
+.topbar-disc-btn.spinning .disc-icon-wrap { animation: disc-play 8s linear infinite; }
+.topbar-disc-btn:hover {
+  transform: scale(1.06); border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 20px rgba(255, 75, 110, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+}
+.topbar-disc-btn:active { transform: scale(0.92); }
+@keyframes disc-play { to { transform: rotate(360deg); } }
+
+/* Right Navigation Sidebar Dock */
+.retro-sidebar-dock {
+  position: fixed; right: 0; top: 50%; transform: translateY(-50%);
+  z-index: 30; user-select: none; touch-action: none;
+}
+.retro-dock-halo {
+  position: absolute; inset: -20px 0 -20px -25px;
+  background: radial-gradient(circle at left, rgba(255, 95, 125, 0.15), transparent 70%);
+  filter: blur(20px); pointer-events: none;
+}
+.retro-dock-capsule {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 66px;
+  padding: 14px 0 16px; border-radius: 38px 0 0 38px; border: 1px solid rgba(255, 130, 155, 0.32); border-right: none;
+  background: linear-gradient(160deg, rgba(34, 25, 34, 0.82) 0%, rgba(20, 15, 21, 0.88) 100%);
+  box-shadow: -10px 10px 32px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(130%); -webkit-backdrop-filter: blur(24px) saturate(130%);
+}
+.dock-time {
+  min-width: 42px; color: #e9dce3; font: 500 9px 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums; text-align: center; letter-spacing: -0.03em;
+}
+.dock-track { position: relative; display: flex; flex-direction: column; gap: 10px; width: 44px; cursor: grab; }
+.dock-item {
+  position: relative; z-index: 2; display: grid; place-items: center; width: 44px; height: 44px;
+  padding: 0; border: 0; border-radius: 50%; background: transparent; color: #b7aeb6;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+.dock-item:hover, .dock-item.hovered { color: #ffffff; }
+.dock-item.active { color: #ffffff; }
+.dock-item-icon { display: grid; place-items: center; }
+.dock-divider { width: 3px; height: 3px; border-radius: 50%; background: rgba(255, 255, 255, 0.16); margin: 0 auto; }
+.dock-indicator {
+  position: absolute; top: 0; left: 0; width: 44px; height: 44px; pointer-events: none; z-index: 1;
+  transition: transform 0.44s cubic-bezier(0.16, 1.4, 0.3, 1);
+}
+.dock-indicator.dragging { transition: none; }
+.retro-knob {
+  position: relative; width: 100%; height: 100%; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #2e222f, #130e15 85%);
+  border: 1.5px solid rgba(255, 110, 140, 0.45);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 16px rgba(255, 80, 115, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+.retro-knob::after {
+  content: ''; position: absolute; inset: 16px; border-radius: 50%;
+  background: #ff5277; box-shadow: 0 0 10px #ff5277;
+}
+.dock-indicator.spinning .retro-knob { animation: knob-rotation 7s linear infinite; }
+@keyframes knob-rotation { to { transform: rotate(360deg); } }
+
+.dock-tooltip {
+  position: absolute; right: calc(100% + 12px); display: grid; gap: 2px; padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 8px; background: rgba(20, 16, 22, 0.92);
+  color: #fff; white-space: nowrap; transform: translateY(-50%); pointer-events: none;
+}
+.tooltip-title { font-weight: 700; font-size: 11px; }
+.tooltip-sub { color: #9c929a; font-size: 9px; }
+
+@media (max-width: 600px) {
+  .topbar { height: 105px; padding: 24px 16px 8px; }
+  .brand { font-size: clamp(30px, 8.5vw, 44px); }
+  .brand::after { font-size: 8px; letter-spacing: 0.28em; margin-top: 7px; }
+  .topbar-disc-btn { width: 44px; height: 44px; }
+  .retro-dock-capsule { width: 58px; padding: 10px 0 12px; }
+  .dock-track { width: 38px; gap: 8px; }
+  .dock-item, .dock-indicator { width: 38px; height: 38px; }
+}
+@media (hover: none) {
+  .dock-tooltip { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand, .topbar-disc-btn .disc-icon-wrap { animation: none; transition: none; }
+}

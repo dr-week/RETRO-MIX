@@ -1,0 +1,128 @@
+@use './turntable';
+
+.player-wrapper {
+  --safe-bottom: max(22px, env(safe-area-inset-bottom));
+  width: 100%;
+  min-height: calc(100svh - 130px);
+  position: relative;
+}
+.mountain-spectrum {
+  position: fixed; z-index: 1; inset-inline: 0; bottom: 0; width: 100%;
+  height: clamp(100px, 20svh, 200px); overflow: visible; pointer-events: none;
+  opacity:.08; transition:opacity 1.4s ease;
+}
+.mountain-spectrum.is-playing { opacity:1; }
+@media(prefers-reduced-motion:reduce) { .mountain-spectrum { transition:none; } }
+@media(prefers-reduced-motion:no-preference) {
+  .discover-view,.library-view,.downloads-view { animation:section-arrive .55s cubic-bezier(.2,.8,.2,1) both; }
+  .vinyl-center-hub { transition:box-shadow .4s ease; }
+  .vinyl-center-hub:hover { box-shadow:0 0 0 12px #0a080cd9,0 0 0 14px #ffffff18,0 0 28px #eaa8bd18; }
+}
+@keyframes section-arrive { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.mountain-spectrum-fill { fill: url(#mountain-spectrum-fill); }
+.mountain-spectrum-edge {
+  fill:none; stroke:url(#mountain-spectrum-rim); stroke-width:1.2; vector-effect:non-scaling-stroke; filter:drop-shadow(0 -2px 5px #b8321840);
+}
+
+/* Vinyl Stage & Deck */
+.vinyl-stage {
+  position: fixed; z-index: 5; isolation: isolate; top: 48%;
+  right:-18px; width:min(102vw, 66svh, 740px); aspect-ratio:1;
+  display:grid; place-items:center; margin:0; transform:translateY(-50%);
+}
+.circular-deck-container { width: 100%; height: 100%; position: relative; display: grid; place-items: center; }
+.deck-outer-ring {
+  position: absolute; z-index: 1; inset: 4.5%; border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.02), 0 0 60px rgba(255, 75, 110, 0.12);
+  pointer-events: none;
+}
+.vinyl-art-layer { position: absolute; z-index: 2; inset: 0; display: grid; place-items: center; pointer-events: none; }
+
+/* Circular Seeker Arc */
+.circular-seek-svg { position:absolute; inset:0; width:100%; height:100%; z-index:3; touch-action:none; cursor:pointer; }
+.circular-seek-svg:focus-visible { outline: none; filter: drop-shadow(0 0 10px #ff7594); }
+.timeline-layer { overflow: visible; }
+.seek-track-bg { stroke:rgba(255,255,255,.12); stroke-width:1.5; stroke-linecap:round; }
+.seek-track-progress { stroke-width:2; stroke-linecap:round; }
+.seek-endpoint { fill: #141016; stroke: rgba(255, 255, 255, 0.2); stroke-width: 2; pointer-events: none; }
+.seek-knob-outer { fill: #ffffff; filter: drop-shadow(0 0 8px rgba(255, 85, 120, 0.95)); }
+.seek-knob-inner { fill: #ffffff; }
+
+.seek-time-indicator, .seek-duration-indicator {
+  font-family: 'DM Sans', sans-serif; font-size: 11px; letter-spacing: 0.04em;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.9)); pointer-events: none;
+}
+.seek-time-indicator { fill: #ffffff; font-weight: 600; }
+.seek-duration-indicator { fill: #736972; font-weight: 500; }
+
+/* Track Info */
+.track-info-centered {
+  position: fixed; z-index: 6; left: max(22px, env(safe-area-inset-left));
+  bottom: calc(var(--safe-bottom) + 148px); width: min(44vw, 420px); margin: 0; text-align: left;
+}
+.track-info-centered h2 {
+  margin: 0; color: #ffffff; font-size: clamp(34px, 5.6vw, 60px);
+  line-height: 1.05; letter-spacing: -0.055em; font-weight: 800;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.track-info-centered p {
+  margin: 6px 0 0; color: #7b707a; font-size: clamp(16px, 2.2vw, 22px); font-weight: 500;
+}
+
+/* Waveform Visualizer */
+.waveform-visualizer {
+  position: fixed; z-index: 6; left: max(22px, env(safe-area-inset-left));
+  bottom: calc(var(--safe-bottom) + 94px); display: flex; align-items: center; gap: 5px; height: 36px; margin: 0;
+}
+.wave-bar {
+  width: 3.5px; height: var(--wave-height); border-radius: 4px;
+  background: linear-gradient(180deg, #ff728e, #ff4c72); transform-origin: center;
+}
+.wave-bar.is-dot { width: 3.5px; height: 3.5px; border-radius: 50%; background: #3c323a; }
+.waveform-visualizer.active .wave-bar:not(.is-dot) {
+  animation: wave-pulse 1s ease-in-out infinite alternate; animation-delay: calc(var(--bar-index) * 45ms);
+}
+.waveform-visualizer.active .wave-bar.is-dot { opacity: 0.6; }
+
+/* Transport Buttons */
+.minimal-transport {
+  position: fixed; z-index: 6; left: max(22px, env(safe-area-inset-left));
+  bottom: var(--safe-bottom); display: flex; gap: 20px; margin: 0;
+}
+.neumorph-btn {
+  display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12); color: #bfb5bd;
+  background: radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.08), rgba(24, 18, 25, 0.75));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s, color 0.22s;
+}
+.neumorph-btn:hover { transform: scale(1.05); color: #fff; border-color: rgba(255, 255, 255, 0.28); }
+.neumorph-btn.selected {
+  color: #ff5277; border-color: rgba(255, 82, 119, 0.6);
+  box-shadow: 0 0 22px rgba(255, 82, 119, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+.neumorph-btn svg { width: 22px; height: 22px; }
+.playback-error {
+  position: fixed; z-index: 7; left: max(22px, env(safe-area-inset-left));
+  bottom: calc(var(--safe-bottom) + 215px); color: #ff8ca0; font-size: 13px;
+}
+
+@keyframes wave-pulse { to { transform: scaleY(1.3); } }
+
+@media (min-width: 701px) {
+  .player-wrapper { min-height: calc(100svh - 155px); }
+  .track-info-centered { bottom: calc(var(--safe-bottom) + 160px); }
+  .waveform-visualizer { bottom: calc(var(--safe-bottom) + 102px); }
+  .minimal-transport { gap: 26px; }
+  .neumorph-btn { width: 72px; height: 72px; }
+}
+
+@media (max-width: 440px) {
+  .minimal-transport { gap: 12px; }
+  .track-info-centered { width: min(calc(100vw - 110px), 400px); bottom: calc(var(--safe-bottom) + 140px); }
+  .track-info-centered h2 { font-size: clamp(30px, 9.5vw, 42px); }
+  .waveform-visualizer { gap: 3.5px; transform: scale(0.88); transform-origin: left center; }
+  .neumorph-btn { width: 56px; height: 56px; }
+}

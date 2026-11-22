@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Sparkles, ListMusic, FolderHeart, Disc3 } from 'lucide-vue-next'
+import { Sparkles, ListMusic, FolderHeart, Disc3, SlidersHorizontal } from 'lucide-vue-next'
 import type { Section, NavSection, GeneratedPlaylist } from './types/music'
 import { usePlayback } from './composables/usePlayback'
 import { useDiscovery } from './composables/useDiscovery'
@@ -15,6 +15,7 @@ import MiniPlayer from './components/player/MiniPlayer.vue'
 import LibraryView from './components/library/LibraryView.vue'
 import DownloadsView from './components/downloads/DownloadsView.vue'
 import DiscoverView from './components/discover/DiscoverView.vue'
+import MixerView from './components/mixer/MixerView.vue'
 import PlaylistView from './components/playlist/PlaylistView.vue'
 
 const tracks = ref<any[]>([])
@@ -40,6 +41,7 @@ const navSections: NavSection[] = [
   { id: 'discover', label: 'Discover', subtitle: 'Search Music', icon: Sparkles },
   { id: 'playlist', label: 'Playlist', subtitle: 'Queue & Mix', icon: ListMusic },
   { id: 'library', label: 'Library', subtitle: 'Collection', icon: FolderHeart },
+  { id: 'mixer', label: 'Mixer', subtitle: 'DJ Decks', icon: SlidersHorizontal },
   { id: 'player', label: 'Listen', subtitle: 'Turntable Player', icon: Disc3 }
 ]
 
@@ -78,6 +80,8 @@ function loadPlaylist(pl: GeneratedPlaylist) {
       </section>
 
       <section v-show="activeTab !== 'player'" class="library-column">
+        <MixerView v-if="activeTab === 'mixer'" :tracks="tracks" />
+
         <PlaylistView
           v-if="activeTab === 'playlist'" :tracks="tracks" :current-track="currentTrack"
           :is-playing="isPlaying" :playlists="playlists"

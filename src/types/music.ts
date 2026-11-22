@@ -87,7 +87,7 @@ export interface AudioBridgePlugin {
   addListener(eventName: 'ended', callback: () => void): Promise<{ remove: () => Promise<void> }>
 }
 
-export type Section = 'player' | 'library' | 'downloads' | 'discover' | 'playlist'
+export type Section = 'player' | 'library' | 'downloads' | 'discover' | 'playlist' | 'mixer'
 
 export interface NavSection {
   id: Section

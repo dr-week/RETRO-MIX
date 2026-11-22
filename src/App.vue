@@ -12,6 +12,7 @@ import { useAutoDj } from './composables/useAutoDj'
 
 import TopBar from './components/layout/TopBar.vue'
 import SceneryLayers from './components/layout/SceneryLayers.vue'
+import DesktopShowcase from './components/layout/DesktopShowcase.vue'
 import SidebarDock from './components/navigation/SidebarDock.vue'
 import VinylPlayer from './components/player/VinylPlayer.vue'
 import MiniPlayer from './components/player/MiniPlayer.vue'
@@ -160,6 +161,23 @@ async function handleAddToPlaylist(track: Track, playlistId?: string) {
       </section>
 
       <section v-show="activeTab !== 'player'" class="library-column">
+        <div v-if="activeTab === 'player'" class="desktop-only-showcase">
+          <DesktopShowcase
+            :tracks="tracks"
+            :current-track="currentTrack"
+            :is-playing="isPlaying"
+            :smart-playlists="smartPlaylists"
+            :manual-playlists="manualPlaylists"
+            :because-you-played="becauseYouPlayed"
+            :seed-track="seedTrack"
+            @select-track="selectTrack"
+            @load-playlist="loadPlaylist"
+            @dj-playlist="launchDjPlaylist"
+            @add-to-playlist="t => void handleAddToPlaylist(t)"
+            @navigate="s => activeTab = s"
+          />
+        </div>
+
         <MixerView v-if="activeTab === 'mixer'" :tracks="tracks" :mixer="mixer" :auto-dj="autoDj" />
 
         <PlaylistView

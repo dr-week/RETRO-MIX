@@ -191,6 +191,51 @@ export function buildPromptPlaylist(prompt: string, catalog: Track[]): { parsed:
 }
 
 /**
+ * Pure onset-energy autocorrelation BPM detector on mono PCM samples.
+ */
+export function detectBpmFromSamples(data: Float32Array, sr: number): number | null {
+  const maxSamples = Math.min(data.length, sr * 30)
+  const hop = Math.max(256, Math.floor(sr / 100)) // ~100 Hz envelope
+  const envLen = Math.floor(maxSamples / hop)
+  if (envLen < 100) return null
+
+  const env = new Float32Array(envLen)
+  let prev = 0
+  for (let i = 0; i < envLen; i++) {
+    let sum = 0
+    const start = i * hop
+    for (let j = 0; j < hop; j++) {
+      const v = data[start + j]
+      sum += v * v
+    }
+    const rms = Math.sqrt(sum / hop)
+    env[i] = Math.max(0, rms - prev)
+    prev = rms
+  }
+
+  const envRate = sr / hop
+  const minLag = Math.floor((envRate * 60) / 170)
+  const maxLag = Math.floor((envRate * 60) / 70)
+  let bestLag = minLag
+  let bestCorr = -1
+
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let corr = 0
+    for (let i = 0; i < envLen - lag; i++) {
+      corr += env[i] * env[i + lag]
+    }
+    if (corr > bestCorr) {
+      bestCorr = corr
+      bestLag = lag
+    }
+  }
+
+  if (bestCorr <= 0) return null
+  const bpm = Math.round((envRate * 60) / bestLag)
+  return bpm >= 65 && bpm <= 180 ? bpm : null
+}
+
+/**
  * Estimate track BPM in the browser using onset-energy autocorrelation on the first ~30s.
  * Returns null if audio cannot be fetched (e.g., CORS blocked) or decoded.
  */
@@ -208,47 +253,8 @@ export async function estimateBpmFromUrl(id: string, src: string): Promise<numbe
     const ctx = new AudioCtx()
     try {
       const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0))
-      const data = audioBuf.getChannelData(0)
-      const sr = audioBuf.sampleRate
-      const maxSamples = Math.min(data.length, sr * 30)
-      const hop = Math.max(256, Math.floor(sr / 100)) // ~100 Hz envelope
-      const envLen = Math.floor(maxSamples / hop)
-      if (envLen < 100) return null
-
-      const env = new Float32Array(envLen)
-      let prev = 0
-      for (let i = 0; i < envLen; i++) {
-        let sum = 0
-        const start = i * hop
-        for (let j = 0; j < hop; j++) {
-          const v = data[start + j]
-          sum += v * v
-        }
-        const rms = Math.sqrt(sum / hop)
-        env[i] = Math.max(0, rms - prev)
-        prev = rms
-      }
-
-      const envRate = sr / hop
-      const minLag = Math.floor((envRate * 60) / 170)
-      const maxLag = Math.floor((envRate * 60) / 70)
-      let bestLag = minLag
-      let bestCorr = -1
-
-      for (let lag = minLag; lag <= maxLag; lag++) {
-        let corr = 0
-        for (let i = 0; i < envLen - lag; i++) {
-          corr += env[i] * env[i + lag]
-        }
-        if (corr > bestCorr) {
-          bestCorr = corr
-          bestLag = lag
-        }
-      }
-
-      if (bestCorr <= 0) return null
-      const bpm = Math.round((envRate * 60) / bestLag)
-      if (bpm >= 65 && bpm <= 180) {
+      const bpm = detectBpmFromSamples(audioBuf.getChannelData(0), audioBuf.sampleRate)
+      if (bpm) {
         saveBpmCache(id, bpm)
         return bpm
       }

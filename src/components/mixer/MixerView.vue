@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Play, Pause, SkipBack, Shuffle, Radio, Gauge, HardDriveDownload } from 'lucide-vue-next'
+import { Play, Pause, SkipBack, Shuffle, Radio, Gauge, HardDriveDownload, Repeat, Sparkles, Drum } from 'lucide-vue-next'
 import type { AutoDjMode, Track } from '../../types/music'
 import type { DeckId, useMixer } from '../../composables/useMixer'
 import type { useAutoDj } from '../../composables/useAutoDj'
+import type { BeatPattern, DjSfxKind } from '../../services/djFxService'
 
 const props = defineProps<{
   tracks: Track[]
@@ -18,6 +19,21 @@ const modes: Array<{ id: AutoDjMode; label: string }> = [
   { id: 'playlist', label: 'Playlist' },
   { id: 'endless', label: 'Endless' }
 ]
+const sfxPads: Array<{ id: DjSfxKind; label: string }> = [
+  { id: 'airhorn', label: 'Airhorn' },
+  { id: 'riser', label: 'Riser' },
+  { id: 'drop', label: 'Drop Boom' },
+  { id: 'scratch', label: 'Scratch' },
+  { id: 'laser', label: 'Laser' },
+  { id: 'clap', label: 'Clap' }
+]
+const beatPatterns: Array<{ id: BeatPattern; label: string }> = [
+  { id: 'off', label: 'Off' },
+  { id: 'house', label: 'House' },
+  { id: 'lofi', label: 'Lo-Fi' },
+  { id: 'trap', label: 'Trap' },
+  { id: 'breakbeat', label: 'Breakbeat' }
+]
 
 function pick(id: DeckId, e: Event) {
   const t = props.tracks.find(x => x.id === (e.target as HTMLSelectElement).value)
@@ -28,7 +44,7 @@ function pick(id: DeckId, e: Event) {
 <template>
   <div class="mixer">
     <div class="mixer-head">
-      <h2>Music Mixer & Auto-DJ</h2>
+      <h2>Music Mixer &amp; Auto-DJ</h2>
       <div class="dj-modes" role="group" aria-label="Auto-DJ mode">
         <button
           v-for="m in modes"
@@ -81,11 +97,18 @@ function pick(id: DeckId, e: Event) {
           <button class="play" @click="mixer.toggle(id)" :aria-label="mixer.decks[id].playing ? 'Pause' : 'Play'">
             <component :is="mixer.decks[id].playing ? Pause : Play" :size="20" />
           </button>
+          <button
+            :class="{ active: mixer.decks[id].looping }"
+            title="Toggle 4-beat remix loop"
+            @click="mixer.toggleLoop(id, 4)"
+          ><Repeat :size="15" /> 4-Beat Loop</button>
         </div>
         <label>Volume <input type="range" min="0" max="1" step="0.01" v-model.number="mixer.decks[id].volume" /></label>
         <label>Low <input type="range" min="-12" max="12" step="0.5" v-model.number="mixer.decks[id].low" /></label>
         <label>Mid <input type="range" min="-12" max="12" step="0.5" v-model.number="mixer.decks[id].mid" /></label>
         <label>High <input type="range" min="-12" max="12" step="0.5" v-model.number="mixer.decks[id].high" /></label>
+        <label>Filter <input type="range" min="-1" max="1" step="0.02" v-model.number="mixer.decks[id].filter" @dblclick="mixer.decks[id].filter = 0" /></label>
+        <label>Echo <input type="range" min="0" max="0.6" step="0.02" v-model.number="mixer.decks[id].echo" /></label>
         <label>Tempo {{ mixer.decks[id].rate.toFixed(2) }}× <input type="range" min="0.8" max="1.2" step="0.01" v-model.number="mixer.decks[id].rate" /></label>
       </section>
     </div>
@@ -116,6 +139,32 @@ function pick(id: DeckId, e: Event) {
       <label>Master <input type="range" min="0" max="1" step="0.01" v-model.number="mixer.master.value" /></label>
     </div>
 
+    <!-- Live Remix FX Pads & BPM-Synced Beat Machine -->
+    <div class="fx-grid">
+      <section class="fx-panel">
+        <h3><Sparkles :size="14" /> DJ Sound Effects (SFX Pads)</h3>
+        <div class="sfx-pads">
+          <button v-for="pad in sfxPads" :key="pad.id" class="sfx-pad" @click="mixer.playSfx(pad.id)">
+            {{ pad.label }}
+          </button>
+        </div>
+      </section>
+
+      <section class="fx-panel">
+        <h3><Drum :size="14" /> Beat Layer ({{ mixer.activeBpm.value }} BPM Sync)</h3>
+        <div class="beat-pills">
+          <button
+            v-for="bp in beatPatterns"
+            :key="bp.id"
+            class="mode-pill"
+            :class="{ active: mixer.beatPattern.value === bp.id }"
+            @click="mixer.setBeatPattern(bp.id)"
+          >{{ bp.label }}</button>
+        </div>
+        <label class="beat-vol">Beat Vol <input type="range" min="0" max="1" step="0.02" v-model.number="mixer.beatVolume.value" /></label>
+      </section>
+    </div>
+
     <section v-if="autoDj.queue.value.length" class="up-next">
       <h3>Up Next (Auto-DJ Queue)</h3>
       <div class="queue-list">
@@ -133,9 +182,9 @@ function pick(id: DeckId, e: Event) {
 .mixer { max-width: 900px; margin: 0 auto; padding: 24px 16px 120px; color: #f3e6ee; }
 .mixer-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
 h2 { margin: 0; font-size: 1.25rem; }
-.dj-modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.dj-modes, .beat-pills { display: flex; flex-wrap: wrap; gap: 6px; }
 .mode-pill { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; border: 1px solid #d5b7c144; background: #ffffff0a; color: #d8c8d2; font-size: .78rem; cursor: pointer; }
-.mode-pill.active { background: #ff5f7d33; border-color: #ff5f7d; color: #fff; }
+.mode-pill.active, button.active { background: #ff5f7d33; border-color: #ff5f7d; color: #fff; }
 .dj-status { margin: 0 0 12px; font-size: .8rem; color: #ff85a1; }
 .decks { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .deck { padding: 16px; border-radius: 20px; border: 1px solid #d5b7c13d; background: #16131ccc; backdrop-filter: blur(16px); display: grid; gap: 8px; }
@@ -150,13 +199,20 @@ select { background: #201c23; color: inherit; border: 1px solid #d5b7c13d; borde
 .time { font-size: .8rem; opacity: .7; }
 label { display: grid; grid-template-columns: 90px 1fr; align-items: center; font-size: .85rem; gap: 8px; }
 input[type=range] { accent-color: #e6a9bf; width: 100%; }
-.btns { display: flex; gap: 8px; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
 button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid #d5b7c166; background: #ffffff10; color: inherit; cursor: pointer; }
 button.play { background: #e6a9bf33; }
 button:disabled { opacity: .4; cursor: default; }
 .xfader { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin: 20px 0 12px; font-weight: 700; }
 .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
 .row label { grid-template-columns: auto 140px; }
+.fx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 20px; }
+.fx-panel { padding: 14px; border-radius: 16px; border: 1px solid #d5b7c12e; background: #16131cbb; display: grid; gap: 10px; }
+.fx-panel h3 { margin: 0; font-size: .84rem; color: #ff85a1; display: inline-flex; align-items: center; gap: 6px; }
+.sfx-pads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sfx-pad { justify-content: center; border-radius: 10px; padding: 10px 6px; font-size: .78rem; font-weight: 600; background: linear-gradient(145deg, #ff5f7d24, #ffffff08); border-color: #ff5f7d44; }
+.sfx-pad:active { transform: scale(0.95); background: #ff5f7d55; }
+.beat-vol { grid-template-columns: 72px 1fr; margin-top: 4px; }
 .up-next { margin-top: 22px; padding: 14px; border-radius: 14px; border: 1px solid #d5b7c12a; background: #16131c99; }
 .up-next h3 { margin: 0 0 8px; font-size: .85rem; color: #ff85a1; }
 .queue-list { display: grid; gap: 6px; }

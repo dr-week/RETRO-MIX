@@ -76,6 +76,22 @@ describe('similarityService', () => {
   })
 })
 
+import { detectBpmFromSamples } from '../src/services/similarityService'
+import { BEAT_PATTERNS, stepDurationSeconds } from '../src/services/djFxService'
+
+function makeKickTrack(bpm: number, seconds = 12, sr = 22050): Float32Array {
+  const buf = new Float32Array(sr * seconds)
+  const beatInterval = Math.round((60 / bpm) * sr)
+  const pulseLen = Math.round(sr * 0.04)
+  for (let pos = 0; pos + pulseLen < buf.length; pos += beatInterval) {
+    for (let i = 0; i < pulseLen; i++) {
+      const env = Math.exp(-i / (sr * 0.012))
+      buf[pos + i] = env * Math.sin((2 * Math.PI * 80 * i) / sr)
+    }
+  }
+  return buf
+}
+
 describe('playlistService', () => {
   test('detectGenre infers genre from metadata when missing', () => {
     const inferred = detectGenre({ id: 'x', title: 'Piano Solo', artist: 'Anon', album: 'Classical', duration: 100, src: '' })
@@ -86,5 +102,27 @@ describe('playlistService', () => {
     const smart = generateSmartPlaylists(catalog)
     expect(smart.length).toBeGreaterThan(0)
     expect(smart.every(p => p.kind === 'smart')).toBe(true)
+  })
+})
+
+describe('DJ BPM detection & beat machine', () => {
+  test('detectBpmFromSamples accurately detects 90, 120, and 140 BPM synthesized audio', () => {
+    const b90 = detectBpmFromSamples(makeKickTrack(90), 22050)
+    const b120 = detectBpmFromSamples(makeKickTrack(120), 22050)
+    const b140 = detectBpmFromSamples(makeKickTrack(140), 22050)
+    expect(Math.abs((b90 ?? 0) - 90)).toBeLessThanOrEqual(2)
+    expect(Math.abs((b120 ?? 0) - 120)).toBeLessThanOrEqual(2)
+    expect(Math.abs((b140 ?? 0) - 140)).toBeLessThanOrEqual(3)
+  })
+
+  test('djFxService beat patterns have valid 16-step grids and accurate BPM step timing', () => {
+    for (const pattern of Object.values(BEAT_PATTERNS)) {
+      expect(pattern.kick.length).toBe(16)
+      expect(pattern.snare.length).toBe(16)
+      expect(pattern.hat.length).toBe(16)
+      expect(pattern.clap.length).toBe(16)
+    }
+    expect(stepDurationSeconds(120)).toBeCloseTo(0.125, 4) // 16th note at 120 BPM = 125ms
+    expect(stepDurationSeconds(90)).toBeCloseTo(0.1667, 3)
   })
 })

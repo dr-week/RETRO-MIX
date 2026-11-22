@@ -47,10 +47,11 @@ const navSections: NavSection[] = [
 
 const { currentTrack, isPlaying, playbackError, isShuffle, repeat, progress, spectrum, togglePlayback, selectTrack, onSeek, nextTrack, previousTrack, toggleShuffle } = usePlayback(tracks)
 const { discoverQuery, discoverTracks, youtubeTracks, searching, discoverError, trends, loadingTrends, trendError, clearDiscovery, playTrend } = useDiscovery(selectTrack, () => activeTab.value = 'player')
-const { downloading, downloadError, importing, activeDownloads, downloadYouTube, downloadArchive, importMp3Files, removeOffline } = useTrackDownloader(tracks, activeTab)
+const { autoDownload, setAutoDownload, autoDownloadTrack, downloading, downloadError, importing, activeDownloads, downloadYouTube, downloadArchive, importMp3Files, removeOffline } = useTrackDownloader(tracks, activeTab)
 const { query, offlineQuery, playlists, filteredTracks, recentTracks, suggestedTracks, offlineTracks, offlineSize, initLibrary, rateTrack } = useLibrary(tracks, trends)
 
 void initLibrary()
+watch(currentTrack, t => { void autoDownloadTrack(t) })
 
 function loadPlaylist(pl: GeneratedPlaylist) {
   const subset = tracks.value.filter(t => pl.trackIds.includes(t.id))
@@ -67,6 +68,8 @@ function loadPlaylist(pl: GeneratedPlaylist) {
     <SceneryLayers :playing="isPlaying && activeTab === 'player'" />
     <TopBar :is-playing="isPlaying" :is-downloads-open="activeTab === 'downloads'" @go-player="activeTab = 'player'" @toggle-downloads="toggleDownloads" />
     <SidebarDock :sections="navSections" :active-tab="activeTab" :is-playing="isPlaying" :current-time="progress" :duration="currentTrack?.duration ?? 0" @select="s => activeTab = s" />
+
+    <label class="auto-dl"><input type="checkbox" :checked="autoDownload" @change="setAutoDownload(($event.target as HTMLInputElement).checked)" /> Auto-download streams</label>
 
     <main class="layout" :data-active-tab="activeTab">
       <section v-show="activeTab === 'player'" class="player-column">
@@ -127,3 +130,7 @@ function loadPlaylist(pl: GeneratedPlaylist) {
     />
   </div>
 </template>
+
+<style scoped>
+.auto-dl { position: fixed; left: 12px; bottom: 12px; z-index: 40; font-size: .75rem; color: #f3e6ee; background: #16131ccc; border: 1px solid #d5b7c13d; border-radius: 999px; padding: 6px 12px; display: flex; gap: 6px; align-items: center; cursor: pointer; }
+</style>

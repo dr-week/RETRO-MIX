@@ -111,6 +111,29 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
     }
   }
 
+  // Auto-download: cache every streamed track the user plays so it becomes available offline.
+  const autoDownload = ref(localStorage.getItem('autoDownload') !== 'off')
+  const autoTried = new Set<string>()
+  function setAutoDownload(on: boolean) { autoDownload.value = on; localStorage.setItem('autoDownload', on ? 'on' : 'off') }
+
+  async function autoDownloadTrack(track?: Track | null) {
+    if (!autoDownload.value || !track || track.local || autoTried.has(track.id)) return
+    if (tracks.value.some(t => t.id === track.id && t.local)) return
+    autoTried.add(track.id)
+    try {
+      if (track.youtubeUrl) {
+        const vid = track.id.replace(/^youtube-/, '')
+        const prevTab = activeTab.value
+        await downloadYouTube({ id: vid, title: track.title, artist: track.artist, duration: track.duration, cover: track.cover ?? '', url: track.youtubeUrl })
+        activeTab.value = prevTab
+      } else if (/^https?:/.test(track.src)) {
+        const prevTab = activeTab.value
+        await downloadArchive({ id: track.id.replace(/^archive-/, ''), title: track.title, artist: track.artist, album: track.album, duration: track.duration, cover: track.cover ?? '', link: '', license: '', downloadUrl: track.src })
+        activeTab.value = prevTab
+      }
+    } catch { /* failures are surfaced via downloadError / task list */ }
+  }
+
   async function importMp3Files(event: Event) {
     const input = event.target as HTMLInputElement
     const files = Array.from(input.files ?? []).filter(f => f.name.toLowerCase().endsWith('.mp3'))
@@ -136,5 +159,5 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
     onRemovedCurrent?.()
   }
 
-  return { downloading, downloadError, importing, activeDownloads, downloadYouTube, downloadArchive, importMp3Files, removeOffline }
+  return { autoDownload, setAutoDownload, autoDownloadTrack, downloading, downloadError, importing, activeDownloads, downloadYouTube, downloadArchive, importMp3Files, removeOffline }
 }

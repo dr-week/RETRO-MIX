@@ -145,7 +145,7 @@ export interface ParsedPrompt {
 export function parsePlaylistPrompt(prompt: string): ParsedPrompt {
   const cleaned = prompt.trim()
   const countMatch = cleaned.match(/\b(\d{1,2})\s*(?:tracks?|songs?)?\b/i)
-  const count = countMatch ? Math.max(3, Math.min(40, parseInt(countMatch[1], 10))) : 12
+  const count = countMatch ? Math.max(1, Math.min(40, parseInt(countMatch[1], 10))) : 12
   const keywords = tokenize(cleaned)
 
   let matchedGenre = 'Mix'
@@ -184,7 +184,7 @@ export function buildPromptPlaylist(prompt: string, catalog: Track[]): { parsed:
     .sort((a, b) => b.score - a.score)
 
   const strongMatches = scored.filter(s => s.score >= 12).map(s => s.track)
-  const selected = (strongMatches.length >= Math.min(3, parsed.count) ? strongMatches : scored.map(s => s.track))
+  const selected = (strongMatches.length > 0 ? strongMatches : scored.map(s => s.track))
     .slice(0, parsed.count)
 
   return { parsed, tracks: selected }

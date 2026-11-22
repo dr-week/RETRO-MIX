@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? '/RETRO-MIX/' : '/',
+  base: './',
   plugins: [vue()],
   server: {
     proxy: {

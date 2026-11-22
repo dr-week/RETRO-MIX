@@ -44,6 +44,7 @@ export function generateSmartPlaylists(tracks: Track[]): GeneratedPlaylist[] {
       name: `${genre} Mix`,
       description: descriptions[genre] || `${genre} selections just for you.`,
       genre,
+      kind: 'smart',
       cover,
       trackIds: shuffled.slice(0, 15).map(t => t.id),
       createdAt: Date.now()
@@ -54,8 +55,10 @@ export function generateSmartPlaylists(tracks: Track[]): GeneratedPlaylist[] {
 
 export async function syncSmartPlaylists(tracks: Track[]): Promise<GeneratedPlaylist[]> {
   const existing = await fetchPlaylists()
-  if (existing.length > 0 && Math.random() > 0.4) return existing
+  const custom = existing.filter(p => p.kind === 'manual' || p.kind === 'ai')
+  const smart = existing.filter(p => !p.kind || p.kind === 'smart')
+  if (smart.length > 0 && Math.random() > 0.4) return [...custom, ...smart]
   const fresh = generateSmartPlaylists(tracks)
   for (const pl of fresh) await savePlaylist(pl)
-  return fresh
+  return [...custom, ...fresh]
 }

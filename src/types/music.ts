@@ -13,7 +13,11 @@ export type Track = {
   size?: number
   youtubeUrl?: string
   nativeUri?: string
+  bpm?: number
+  skipCount?: number
 }
+
+export type AutoDjMode = 'off' | 'similar' | 'playlist' | 'endless'
 
 export type DownloadTask = {
   id: string
@@ -30,6 +34,8 @@ export type GeneratedPlaylist = {
   name: string
   description: string
   genre: string
+  kind?: 'manual' | 'smart' | 'ai'
+  prompt?: string
   cover?: string
   trackIds: string[]
   createdAt: number

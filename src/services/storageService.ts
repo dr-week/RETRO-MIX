@@ -77,6 +77,17 @@ export async function savePlaylist(playlist: GeneratedPlaylist): Promise<void> {
   db.close()
 }
 
+export async function deletePlaylist(id: string): Promise<void> {
+  const db = await openDatabase()
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(PLAYLIST_STORE, 'readwrite')
+    tx.objectStore(PLAYLIST_STORE).delete(id)
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+  db.close()
+}
+
 export async function fetchAllStoredTracks(): Promise<StoredTrack[]> {
   const db = await openDatabase()
   const tracks: StoredTrack[] = await new Promise((resolve, reject) => {

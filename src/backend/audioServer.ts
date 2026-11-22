@@ -81,6 +81,33 @@ Bun.serve({
         return json({ tracks })
       } catch (error) { return json({ error: error instanceof Error ? error.message : 'Search failed' }, 502) }
     }
+    if (new URL(request.url).pathname === '/api/ai/playlist' && request.method === 'POST') {
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey) return json({ fallback: true }, 200)
+      try {
+        const body = await request.json() as { prompt?: string; library?: unknown[] }
+        if (typeof body.prompt !== 'string' || !body.prompt.trim()) return json({ error: 'Prompt required' }, 400)
+        const model = process.env.RETROMIX_AI_MODEL || 'gpt-4o-mini'
+        const llmRes = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model,
+            response_format: { type: 'json_object' },
+            messages: [
+              { role: 'system', content: 'You are a DJ playlist curator. Return JSON: {"title": string, "trackIds": string[], "searchQueries": string[]}. Pick matching trackIds from the provided library in good DJ flow order, and up to 2 short searchQueries if more tracks are needed.' },
+              { role: 'user', content: JSON.stringify({ prompt: body.prompt.slice(0, 200), library: (body.library ?? []).slice(0, 120) }) }
+            ]
+          })
+        })
+        if (!llmRes.ok) return json({ fallback: true }, 200)
+        const data = await llmRes.json() as { choices?: Array<{ message?: { content?: string } }> }
+        const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}')
+        return json({ title: parsed.title, trackIds: parsed.trackIds, searchQueries: parsed.searchQueries })
+      } catch {
+        return json({ fallback: true }, 200)
+      }
+    }
     if (new URL(request.url).pathname !== '/api/youtube/convert' || request.method !== 'POST') return json({ error: 'Not found' }, 404)
 
     try {

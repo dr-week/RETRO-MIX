@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { Disc3, Trash2, ListMusic, Shuffle, Sparkles, Play } from 'lucide-vue-next'
 import type { Track, GeneratedPlaylist } from '../../types/music'
+import PlaylistMaker from './PlaylistMaker.vue'
 
 defineProps<{
   tracks: Track[]
   currentTrack?: Track
   isPlaying: boolean
   playlists?: GeneratedPlaylist[]
+  manualPlaylists: GeneratedPlaylist[]
+  seedTrack?: Track
+  becauseYouPlayed: Track[]
+  moreLikeYourLikes: Track[]
+  aiGenerating: boolean
+  aiStatus: string
 }>()
 
 const emit = defineEmits<{
@@ -14,6 +21,14 @@ const emit = defineEmits<{
   (e: 'remove-track', index: number): void
   (e: 'toggle-shuffle'): void
   (e: 'load-playlist', playlist: GeneratedPlaylist): void
+  (e: 'dj-playlist', playlist: GeneratedPlaylist): void
+  (e: 'create-playlist', name: string): void
+  (e: 'rename-playlist', id: string, name: string): void
+  (e: 'delete-playlist', id: string): void
+  (e: 'add-playlist-track', playlistId: string, track: Track): void
+  (e: 'remove-playlist-track', playlistId: string, index: number): void
+  (e: 'reorder-playlist-track', playlistId: string, from: number, to: number): void
+  (e: 'generate-ai', prompt: string, includeDiscover: boolean): void
 }>()
 
 const formatTime = (seconds: number) =>
@@ -22,6 +37,26 @@ const formatTime = (seconds: number) =>
 
 <template>
   <div class="playlist-view">
+    <PlaylistMaker
+      :tracks="tracks"
+      :manual-playlists="manualPlaylists"
+      :seed-track="seedTrack"
+      :because-you-played="becauseYouPlayed"
+      :more-like-your-likes="moreLikeYourLikes"
+      :ai-generating="aiGenerating"
+      :ai-status="aiStatus"
+      @create-playlist="name => emit('create-playlist', name)"
+      @rename-playlist="(id, name) => emit('rename-playlist', id, name)"
+      @delete-playlist="id => emit('delete-playlist', id)"
+      @add-track="(plId, track) => emit('add-playlist-track', plId, track)"
+      @remove-track="(plId, idx) => emit('remove-playlist-track', plId, idx)"
+      @reorder-track="(plId, from, to) => emit('reorder-playlist-track', plId, from, to)"
+      @generate-ai="(prompt, disc) => emit('generate-ai', prompt, disc)"
+      @load-playlist="pl => emit('load-playlist', pl)"
+      @dj-playlist="pl => emit('dj-playlist', pl)"
+      @select-track="t => emit('select-track', t)"
+    />
+
     <!-- Spotify-style Auto-Generated Mixes -->
     <section v-if="playlists && playlists.length > 0" class="auto-mix-section">
       <div class="mix-header">

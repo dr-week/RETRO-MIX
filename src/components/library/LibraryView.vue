@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { Disc3, Search, Heart, Plus, LoaderCircle, ThumbsUp, ThumbsDown, Clock3, Sparkles, Library, Play, Pause } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import type { Track } from '../../types/music'
+import type { GeneratedPlaylist, Track } from '../../types/music'
 
 const emit = defineEmits<{
   (e: 'update:query', value: string): void
   (e: 'select-track', track: Track): void
   (e: 'rate-track', track: Track, rating: 'like' | 'dislike'): void
   (e: 'add-files', event: Event): void
+  (e: 'add-to-playlist', track: Track, playlistId?: string): void
 }>()
 
 const formatTime = (seconds: number) =>
@@ -15,7 +16,7 @@ const formatTime = (seconds: number) =>
 const section = ref<'all' | 'liked' | 'recent' | 'suggested' | 'chill' | 'pop' | 'acoustic' | 'energy'>('all')
 const props = defineProps<{
   filteredTracks: Track[]; recentTracks: Track[]; suggestedTracks: Track[]; currentTrack?: Track
-  isPlaying: boolean; importing: boolean; query: string
+  isPlaying: boolean; importing: boolean; query: string; manualPlaylists?: GeneratedPlaylist[]
 }>()
 const visibleTracks = computed(() => {
   if (section.value === 'liked') return props.filteredTracks.filter(track => track.rating === 'like' || track.favorite)
@@ -102,6 +103,7 @@ const groups = computed(() => {
         <div class="rating-actions">
           <button class="row-action-btn" :class="{ 'is-active': track.rating === 'like' || track.favorite }" :aria-label="track.rating === 'like' || track.favorite ? 'Remove from liked songs' : 'Like and save track'" @click.stop="emit('rate-track', track, 'like')"><ThumbsUp :size="15" /></button>
           <button class="row-action-btn" :class="{ 'is-active': track.rating === 'dislike' }" :aria-label="track.rating === 'dislike' ? 'Remove dislike' : 'Dislike track'" @click.stop="emit('rate-track', track, 'dislike')"><ThumbsDown :size="15" /></button>
+          <button class="row-action-btn" :title="manualPlaylists?.length ? `Add to ${manualPlaylists[0].name}` : 'Add to new playlist'" aria-label="Add to playlist" @click.stop="emit('add-to-playlist', track, manualPlaylists?.[0]?.id)"><Plus :size="15" /></button>
         </div>
       </article>
       </div>

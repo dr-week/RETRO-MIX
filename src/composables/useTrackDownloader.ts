@@ -1,20 +1,61 @@
 import { ref, type Ref } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import type { Track, DiscoveryTrack, YouTubeResult, Section, DownloadTask } from '../types/music'
-import { AudioBridge, persistTrack, removeStoredTrack } from '../services/storageService'
+import { AudioBridge, fetchPlayHistory, persistTrack, removeStoredTrack } from '../services/storageService'
 
-export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>) {
+const STORAGE_CAP_KEY = 'retromix-storage-cap-mb'
+const DEFAULT_CAP_MB = 500
+
+export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>, currentTrackId?: Ref<string | undefined>) {
   const downloading = ref<string | null>(null)
   const downloadError = ref('')
   const importing = ref(false)
   const activeDownloads = ref<DownloadTask[]>([])
+  const storageCapMb = ref<number>(Math.max(50, Number(localStorage.getItem(STORAGE_CAP_KEY)) || DEFAULT_CAP_MB))
 
-  async function saveAndSelect(track: Track, source: Blob | string, kind: 'import' | 'download' = 'download') {
+  function setStorageCapMb(mb: number) {
+    const clamped = Math.max(50, Math.min(5000, Math.round(mb)))
+    storageCapMb.value = clamped
+    localStorage.setItem(STORAGE_CAP_KEY, String(clamped))
+    void enforceStorageCap()
+  }
+
+  async function enforceStorageCap(protectedId?: string) {
+    const capBytes = storageCapMb.value * 1024 * 1024
+    const offline = tracks.value.filter(t => t.local)
+    let total = offline.reduce((sum, t) => sum + (t.size ?? 0), 0)
+    if (total <= capBytes) return
+
+    const history = await fetchPlayHistory().catch(() => [])
+    const lastPlayed = new Map<string, number>()
+    for (const h of history) {
+      const prev = lastPlayed.get(h.id) ?? 0
+      if (h.playedAt > prev) lastPlayed.set(h.id, h.playedAt)
+    }
+
+    const candidates = offline
+      .filter(t => t.id !== protectedId && t.id !== currentTrackId?.value)
+      .sort((a, b) => (lastPlayed.get(a.id) ?? 0) - (lastPlayed.get(b.id) ?? 0))
+
+    for (const victim of candidates) {
+      if (total <= capBytes) break
+      try {
+        await removeStoredTrack(victim)
+        total -= victim.size ?? 0
+        tracks.value = tracks.value.filter(t => t.id !== victim.id)
+      } catch {
+        break
+      }
+    }
+  }
+
+  async function saveAndSelect(track: Track, source: Blob | string, kind: 'import' | 'download' = 'download', silent = false) {
     await persistTrack(track, source, kind)
     const idx = tracks.value.findIndex(item => item.id === track.id)
     if (idx >= 0) tracks.value.splice(idx, 1, track)
     else tracks.value.push(track)
-    if (kind === 'download') activeTab.value = 'downloads'
+    if (kind === 'download' && !silent) activeTab.value = 'downloads'
+    await enforceStorageCap(track.id)
   }
 
   function startTask(id: string, title: string, artist: string): DownloadTask {
@@ -37,7 +78,7 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
     setTimeout(() => { activeDownloads.value = activeDownloads.value.filter(t => t.id !== id) }, 4000)
   }
 
-  async function downloadYouTube(result: YouTubeResult) {
+  async function downloadYouTube(result: YouTubeResult, silent = false) {
     downloading.value = result.id
     downloadError.value = ''
     const task = startTask(result.id, result.title, result.artist)
@@ -55,7 +96,7 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
       const id = `youtube-${result.id}`
       if (Capacitor.isNativePlatform()) {
         const saved = await AudioBridge.downloadYouTube({ url: result.url, id: result.id, title: result.title })
-        await saveAndSelect({ id, title: result.title, artist: result.artist, album: 'YouTube · MP3', duration: result.duration, cover: result.cover, src: saved.uri, nativeUri: saved.uri, local: true, size: saved.size }, saved.uri)
+        await saveAndSelect({ id, title: result.title, artist: result.artist, album: 'YouTube · MP3', duration: result.duration, cover: result.cover, src: saved.uri, nativeUri: saved.uri, local: true, size: saved.size }, saved.uri, 'download', silent)
       } else {
         const res = await fetch('/api/youtube/convert', {
           method: 'POST',
@@ -65,7 +106,7 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
         if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || `Conversion failed (${res.status}).`)
         const blob = await res.blob()
         if (!blob.size || !blob.type.includes('audio')) throw new Error('Backend did not return MP3 audio.')
-        await saveAndSelect({ id, title: result.title, artist: result.artist, album: 'YouTube · MP3', duration: result.duration, cover: result.cover, src: URL.createObjectURL(blob), local: true, size: blob.size }, blob)
+        await saveAndSelect({ id, title: result.title, artist: result.artist, album: 'YouTube · MP3', duration: result.duration, cover: result.cover, src: URL.createObjectURL(blob), local: true, size: blob.size }, blob, 'download', silent)
       }
       completeTask(result.id)
     } catch (err) {
@@ -78,7 +119,7 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
     }
   }
 
-  async function downloadArchive(track: DiscoveryTrack) {
+  async function downloadArchive(track: DiscoveryTrack, silent = false) {
     downloading.value = track.id
     downloadError.value = ''
     const task = startTask(track.id, track.title, track.artist)
@@ -92,13 +133,13 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
       const id = `archive-${track.id}`
       if (Capacitor.isNativePlatform()) {
         const saved = await AudioBridge.downloadFile({ url: track.downloadUrl, title: track.title })
-        await saveAndSelect({ id, title: track.title, artist: track.artist, album: track.album, duration: track.duration, src: saved.uri, nativeUri: saved.uri, cover: track.cover, local: true, size: saved.size }, saved.uri)
+        await saveAndSelect({ id, title: track.title, artist: track.artist, album: track.album, duration: track.duration, src: saved.uri, nativeUri: saved.uri, cover: track.cover, local: true, size: saved.size }, saved.uri, 'download', silent)
       } else {
         const res = await fetch(track.downloadUrl)
         if (!res.ok) throw new Error(`Music download failed (${res.status}).`)
         const blob = await res.blob()
         if (!blob.size || blob.size > 150_000_000 || blob.type.includes('text/html')) throw new Error('The source did not return a valid audio file.')
-        await saveAndSelect({ id, title: track.title, artist: track.artist, album: track.album, duration: track.duration, src: URL.createObjectURL(blob), cover: track.cover, local: true, size: blob.size }, blob)
+        await saveAndSelect({ id, title: track.title, artist: track.artist, album: track.album, duration: track.duration, src: URL.createObjectURL(blob), cover: track.cover, local: true, size: blob.size }, blob, 'download', silent)
       }
       completeTask(track.id)
     } catch (err) {
@@ -111,7 +152,7 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
     }
   }
 
-  // Auto-download: cache every streamed track the user plays so it becomes available offline.
+  // Auto-download: cache streamed tracks the user plays or queues so they are available offline.
   const autoDownload = ref(localStorage.getItem('autoDownload') !== 'off')
   const autoTried = new Set<string>()
   function setAutoDownload(on: boolean) { autoDownload.value = on; localStorage.setItem('autoDownload', on ? 'on' : 'off') }
@@ -123,15 +164,28 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
     try {
       if (track.youtubeUrl) {
         const vid = track.id.replace(/^youtube-/, '')
-        const prevTab = activeTab.value
-        await downloadYouTube({ id: vid, title: track.title, artist: track.artist, duration: track.duration, cover: track.cover ?? '', url: track.youtubeUrl })
-        activeTab.value = prevTab
+        await downloadYouTube({ id: vid, title: track.title, artist: track.artist, duration: track.duration, cover: track.cover ?? '', url: track.youtubeUrl }, true)
       } else if (/^https?:/.test(track.src)) {
-        const prevTab = activeTab.value
-        await downloadArchive({ id: track.id.replace(/^archive-/, ''), title: track.title, artist: track.artist, album: track.album, duration: track.duration, cover: track.cover ?? '', link: '', license: '', downloadUrl: track.src })
-        activeTab.value = prevTab
+        await downloadArchive({ id: track.id.replace(/^archive-/, ''), title: track.title, artist: track.artist, album: track.album, duration: track.duration, cover: track.cover ?? '', link: '', license: '', downloadUrl: track.src }, true)
       }
     } catch { /* failures are surfaced via downloadError / task list */ }
+  }
+
+  // Pre-fetch up to 2 upcoming queued tracks in the background so DJ crossfades never stall.
+  let prefetchRunning = false
+  async function prefetchTracks(upcoming: Track[]) {
+    if (!autoDownload.value || prefetchRunning) return
+    const targets = upcoming.filter(t => !t.local && !autoTried.has(t.id)).slice(0, 2)
+    if (!targets.length) return
+    prefetchRunning = true
+    try {
+      for (const track of targets) {
+        if (!autoDownload.value) break
+        await autoDownloadTrack(track)
+      }
+    } finally {
+      prefetchRunning = false
+    }
   }
 
   async function importMp3Files(event: Event) {
@@ -159,5 +213,10 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
     onRemovedCurrent?.()
   }
 
-  return { autoDownload, setAutoDownload, autoDownloadTrack, downloading, downloadError, importing, activeDownloads, downloadYouTube, downloadArchive, importMp3Files, removeOffline }
+  return {
+    autoDownload, setAutoDownload, autoDownloadTrack, prefetchTracks,
+    storageCapMb, setStorageCapMb,
+    downloading, downloadError, importing, activeDownloads,
+    downloadYouTube, downloadArchive, importMp3Files, removeOffline
+  }
 }

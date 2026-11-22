@@ -53,6 +53,7 @@ export async function saveTrackRating(track: Track, rating?: 'like' | 'dislike')
     tx.onerror = () => reject(tx.error)
   })
   db.close()
+  void import('./deviceStorageService').then(m => m.syncAllMetadataToOpfs())
 }
 
 export async function fetchPlaylists(): Promise<GeneratedPlaylist[]> {
@@ -75,6 +76,7 @@ export async function savePlaylist(playlist: GeneratedPlaylist): Promise<void> {
     tx.onerror = () => reject(tx.error)
   })
   db.close()
+  void import('./deviceStorageService').then(m => m.syncAllMetadataToOpfs())
 }
 
 export async function deletePlaylist(id: string): Promise<void> {
@@ -86,6 +88,7 @@ export async function deletePlaylist(id: string): Promise<void> {
     tx.onerror = () => reject(tx.error)
   })
   db.close()
+  void import('./deviceStorageService').then(m => m.syncAllMetadataToOpfs())
 }
 
 export async function fetchAllStoredTracks(): Promise<StoredTrack[]> {
@@ -124,6 +127,7 @@ export async function recordHistoryTrack(track: Track): Promise<void> {
       tx.onerror = () => reject(tx.error)
     })
     db.close()
+    void import('./deviceStorageService').then(m => m.syncAllMetadataToOpfs())
   } catch {
     // Graceful fallback when storage is inaccessible
   }
@@ -138,6 +142,10 @@ export async function persistTrack(track: Track, source: Blob | string, kind: 'i
     tx.onerror = () => reject(tx.error)
   })
   db.close()
+
+  if (source instanceof Blob) {
+    void import('./deviceStorageService').then(m => m.syncMusicToOpfs(track.id, source))
+  }
 
   if (Capacitor.isNativePlatform()) {
     const { src: _src, ...metadata } = track
@@ -154,6 +162,8 @@ export async function removeStoredTrack(track: Track): Promise<void> {
     tx.onerror = () => reject(tx.error)
   })
   db.close()
+
+  void import('./deviceStorageService').then(m => m.removeMusicFromOpfs(track.id))
 
   if (Capacitor.isNativePlatform()) {
     if (track.nativeUri) {

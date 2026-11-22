@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { Disc3, Search, Trash2, ArrowDownToLine } from 'lucide-vue-next'
+import { onMounted, ref } from 'vue'
+import { Disc3, Search, Trash2, ArrowDownToLine, FolderOpen, Download, Upload, HardDrive } from 'lucide-vue-next'
 import type { Track, DownloadTask } from '../../types/music'
+import {
+  exportPhoneDataBackup,
+  getDeviceFolderSummary,
+  importPhoneDataBackup,
+  syncAllMetadataToOpfs,
+  type DeviceFolderSummary
+} from '../../services/deviceStorageService'
 
 defineProps<{
   offlineTracks: Track[]
@@ -16,7 +24,35 @@ const emit = defineEmits<{
   (e: 'select-track', track: Track): void
   (e: 'remove-track', track: Track): void
   (e: 'go-discover'): void
+  (e: 'add-files', event: Event): void
+  (e: 'reload-library'): void
 }>()
+
+const folderSummary = ref<DeviceFolderSummary | null>(null)
+const dataStatus = ref('')
+
+async function refreshFolders() {
+  await syncAllMetadataToOpfs()
+  folderSummary.value = await getDeviceFolderSummary()
+}
+
+onMounted(() => { void refreshFolders() })
+
+async function handleRestore(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const res = await importPhoneDataBackup(file)
+    dataStatus.value = `Restored ${res.playlists} playlists & ${res.likes} likes on this phone.`
+    emit('reload-library')
+    await refreshFolders()
+  } catch {
+    dataStatus.value = 'Invalid backup file.'
+  } finally {
+    input.value = ''
+  }
+}
 
 const formatTime = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`
@@ -32,9 +68,47 @@ const formatSize = (size: number) =>
 <template>
   <div class="downloads-view">
     <div class="section-header">
-      <h2 class="section-title">Downloads</h2>
+      <h2 class="section-title">Downloads & Phone Storage</h2>
       <span v-if="offlineTracks.length" class="section-meta">{{ formatSize(offlineSize) }}</span>
     </div>
+
+    <!-- Per-Phone Isolated Folders & Offline Import -->
+    <section class="device-folders-card">
+      <div class="folders-head">
+        <span class="folders-title"><HardDrive :size="14" /> This Device's Private Storage</span>
+        <span class="folders-tag">{{ folderSummary?.opfsSupported ? 'Separate OPFS Folders' : 'Private Local DB' }}</span>
+      </div>
+      <div class="folders-grid">
+        <div class="folder-pill">
+          <strong>Music Folder</strong>
+          <code>{{ folderSummary?.musicFolder ?? 'retro-mix/music/' }}</code>
+          <span>{{ offlineTracks.length }} offline files</span>
+        </div>
+        <div class="folder-pill">
+          <strong>Data Folder</strong>
+          <code>{{ folderSummary?.dataFolder ?? 'retro-mix/data/' }}</code>
+          <span>likes.json · playlists.json · history.json</span>
+        </div>
+      </div>
+      <div class="folder-actions">
+        <label class="folder-btn">
+          <FolderOpen :size="14" /> Scan Offline Audio
+          <input type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.flac" multiple @change="emit('add-files', $event)" />
+        </label>
+        <label class="folder-btn">
+          <FolderOpen :size="14" /> Scan Folder
+          <input type="file" webkitdirectory multiple @change="emit('add-files', $event)" />
+        </label>
+        <button class="folder-btn" @click="exportPhoneDataBackup">
+          <Download :size="14" /> Backup Likes & Playlists
+        </button>
+        <label class="folder-btn">
+          <Upload :size="14" /> Restore Data
+          <input type="file" accept="application/json,.json" @change="handleRestore" />
+        </label>
+      </div>
+      <p v-if="dataStatus" class="data-status">{{ dataStatus }}</p>
+    </section>
 
     <!-- Active In-Progress Downloads -->
     <div v-if="activeDownloads && activeDownloads.length > 0" class="active-downloads-section">
@@ -186,4 +260,73 @@ const formatSize = (size: number) =>
 .progress-bar-fill.is-error {
   background: #ff4757;
 }
+.device-folders-card {
+  margin-bottom: 18px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 10px;
+}
+.folders-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.folders-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ff85a1;
+}
+.folders-tag {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(143, 240, 184, 0.12);
+  color: #8ff0b8;
+}
+.folders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+.folder-pill {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: grid;
+  gap: 3px;
+  font-size: 11px;
+  color: #b7a8b4;
+}
+.folder-pill strong { color: #f7eff4; font-size: 11px; }
+.folder-pill code { font-size: 10px; color: #ffb3c4; }
+.folder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.folder-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f7eff4;
+  font-size: 11px;
+  cursor: pointer;
+  overflow: hidden;
+}
+.folder-btn:hover { border-color: rgba(255, 95, 125, 0.5); }
+.folder-btn input[type='file'] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.data-status { margin: 0; font-size: 11px; color: #8ff0b8; }
 </style>

@@ -190,13 +190,14 @@ export function useTrackDownloader(tracks: Ref<Track[]>, activeTab: Ref<Section>
 
   async function importMp3Files(event: Event) {
     const input = event.target as HTMLInputElement
-    const files = Array.from(input.files ?? []).filter(f => f.name.toLowerCase().endsWith('.mp3'))
+    const audioRe = /\.(mp3|m4a|wav|ogg|flac|aac|opus)$/i
+    const files = Array.from(input.files ?? []).filter(f => audioRe.test(f.name) || f.type.startsWith('audio/'))
     if (!files.length) return
     importing.value = true
     try {
       for (const file of files) {
         const id = `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-        const base = file.name.replace(/\.mp3$/i, '').trim()
+        const base = file.name.replace(audioRe, '').trim()
         const [artist, title] = base.includes(' - ') ? base.split(' - ') : ['Local Storage', base]
         const track: Track = { id, title: title.trim(), artist: artist.trim(), album: 'Local Audio', duration: 0, src: URL.createObjectURL(file), local: true, size: file.size }
         await saveAndSelect(track, file, 'import')

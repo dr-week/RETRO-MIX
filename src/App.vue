@@ -97,6 +97,20 @@ function launchDjPlaylist(pl: GeneratedPlaylist) {
   void autoDj.startMode('playlist', { seed: ordered[0], playlist: ordered })
 }
 
+const installPrompt = ref<any>(null)
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
+    e.preventDefault()
+    installPrompt.value = e
+  })
+}
+async function installWebApp() {
+  if (!installPrompt.value) return
+  installPrompt.value.prompt()
+  await installPrompt.value.userChoice
+  installPrompt.value = null
+}
+
 async function handleAddToPlaylist(track: Track, playlistId?: string) {
   if (playlistId) {
     await addTrackToPlaylist(playlistId, track)
@@ -115,6 +129,7 @@ async function handleAddToPlaylist(track: Track, playlistId?: string) {
     <SidebarDock :sections="navSections" :active-tab="activeTab" :is-playing="isPlaying" :current-time="progress" :duration="currentTrack?.duration ?? 0" @select="s => activeTab = s" />
 
     <div class="auto-dl-bar">
+      <button v-if="installPrompt" class="install-btn" @click="installWebApp">Install App</button>
       <label class="auto-dl">
         <input type="checkbox" :checked="autoDownload" @change="setAutoDownload(($event.target as HTMLInputElement).checked)" />
         Auto-download
@@ -177,7 +192,7 @@ async function handleAddToPlaylist(track: Track, playlistId?: string) {
             :offline-tracks="offlineTracks" :offline-size="offlineSize"
             :current-track="currentTrack" :is-playing="isPlaying" :active-downloads="activeDownloads"
             @select-track="selectTrack" @remove-track="t => removeOffline(t, () => { if (currentTrack?.id === t.id) isPlaying = false })"
-            @go-discover="activeTab = 'discover'"
+            @go-discover="activeTab = 'discover'" @add-files="importMp3Files" @reload-library="() => void initLibrary()"
           />
         </transition>
 
@@ -205,6 +220,7 @@ async function handleAddToPlaylist(track: Track, playlistId?: string) {
 
 <style scoped>
 .auto-dl-bar { position: fixed; left: 12px; bottom: 12px; z-index: 40; display: flex; align-items: center; gap: 6px; background: #16131ccc; border: 1px solid #d5b7c13d; border-radius: 999px; padding: 5px 10px; backdrop-filter: blur(12px); }
+.install-btn { background: #ff5f7d; color: #fff; border: 0; border-radius: 999px; padding: 3px 9px; font-size: .72rem; font-weight: 600; cursor: pointer; }
 .auto-dl { font-size: .74rem; color: #f3e6ee; display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
 .cap-select { background: transparent; color: #d8c7d2; border: 0; border-left: 1px solid #d5b7c133; padding-left: 6px; font-size: .72rem; cursor: pointer; outline: none; }
 .cap-select option { background: #1c1721; color: #f3e6ee; }

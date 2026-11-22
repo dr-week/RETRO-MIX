@@ -11,6 +11,7 @@
     "dev": "vite",
     "backend:audio": "bun src/backend/audioServer.ts",
     "build": "vue-tsc -b && vite build",
+    "test": "bun test",
     "preview": "vite preview",
     "android:sync": "bun run build && bunx cap sync android",
     "android:open": "bunx cap open android",

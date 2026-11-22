@@ -11,6 +11,11 @@
 </p>
 
 <p align="center">
+  <a href="https://dr-week.github.io/RETRO-MIX/"><strong>🌐 Live Web App</strong></a> •
+  <a href="https://github.com/dr-week/RETRO-MIX/releases/latest"><strong>📱 Download Android APK</strong></a>
+</p>
+
+<p align="center">
   <a href="#overview">Overview</a> •
   <a href="#core-capabilities">Key Features</a> •
   <a href="#system-architecture">Architecture</a> •
